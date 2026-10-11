@@ -1,0 +1,201 @@
+-- สร้าง ScreenGui หลัก
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local UICorner = Instance.new("UICorner")
+local TopBar = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local MinimizeBtn = Instance.new("TextButton")
+local CloseBtn = Instance.new("TextButton")
+local Container = Instance.new("ScrollingFrame")
+local UIListLayout = Instance.new("UIListLayout")
+
+-- สถานะหน้าต่าง
+local isMinimized = false
+
+-- ตั้งค่า ScreenGui
+ScreenGui.Name = "FPS_Ping_Menu"
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- ตั้งค่าหน้าต่างหลัก (MainFrame)
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
+MainFrame.Size = UDim2.new(0, 260, 0, 280)
+MainFrame.Active = true
+MainFrame.Draggable = true -- ทำให้เลื่อนหน้าต่างได้
+
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+-- แถบด้านบน (TopBar สำหรับลากและปิด/ย่อ)
+TopBar.Name = "TopBar"
+TopBar.Parent = MainFrame
+TopBar.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+TopBar.Size = UDim2.new(1, 0, 0, 35)
+
+local TopBarCorner = Instance.new("UICorner")
+TopBarCorner.CornerRadius = UDim.new(0, 8)
+TopBarCorner.Parent = TopBar
+
+Title.Parent = TopBar
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0.05, 0, 0, 0)
+Title.Size = UDim2.new(0.6, 0, 1, 0)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "FPS & Ping Booster"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+-- ปุ่มย่อหน้าต่าง (-)
+MinimizeBtn.Name = "MinimizeBtn"
+MinimizeBtn.Parent = TopBar
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+MinimizeBtn.Position = UDim2.new(0.72, 0, 0.2, 0)
+MinimizeBtn.Size = UDim2.new(0, 22, 0, 22)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.TextSize = 14
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(1, 0)
+MinCorner.Parent = MinimizeBtn
+
+-- ปุ่มปิดเมนู (X)
+CloseBtn.Name = "CloseBtn"
+CloseBtn.Parent = TopBar
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+CloseBtn.Position = UDim2.new(0.86, 0, 0.2, 0)
+CloseBtn.Size = UDim2.new(0, 22, 0, 22)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 12
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(1, 0)
+CloseCorner.Parent = CloseBtn
+
+-- พื้นที่ใส่ปุ่ม (Container)
+Container.Name = "Container"
+Container.Parent = MainFrame
+Container.Active = true
+Container.BackgroundColor3 = Color3.fromRGB(25.5, 25.5, 25.5)
+Container.BackgroundTransparency = 1
+Container.Position = UDim2.new(0, 0, 0, 40)
+Container.Size = UDim2.new(1, 0, 1, -40)
+Container.CanvasSize = UDim2.new(0, 0, 0, 250)
+Container.ScrollBarThickness = 4
+
+UIListLayout.Parent = Container
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 10)
+
+-- 1. ฟังก์ชันแสดง FPS และ Ping (Stats Label)
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Name = "StatsLabel"
+StatsLabel.Parent = Container
+StatsLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+StatsLabel.Size = UDim2.new(0, 230, 0, 45)
+StatsLabel.Font = Enum.Font.GothamSemibold
+StatsLabel.Text = "FPS: Calculating... | Ping: Calculating..."
+StatsLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
+StatsLabel.TextSize = 12
+local StatsCorner = Instance.new("UICorner")
+StatsCorner.CornerRadius = UDim.new(0, 6)
+StatsCorner.Parent = StatsLabel
+
+-- อัปเดตค่า FPS และ Ping แบบเรียลไทม์
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+local lastUpdate = 0
+local frameCount = 0
+
+RunService.RenderStepped:Connect(function(dt)
+	frameCount = frameCount + 1
+	if tick() - lastUpdate >= 1 then
+		local fps = math.floor(frameCount / (tick() - lastUpdate))
+		local ping = 0
+		pcall(function()
+			ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+		end)
+		StatsLabel.Text = "FPS: " .. fps .. " | Ping: " .. ping .. " ms"
+		frameCount = 0
+		lastUpdate = tick()
+	end
+end)
+
+-- ฟังก์ชันสร้างปุ่มกด
+local function createButton(name, text, callback)
+	local btn = Instance.new("TextButton")
+	btn.Name = name
+	btn.Parent = Container
+	btn.BackgroundColor3 = Color3.fromRGB(60, 120, 216)
+	btn.Size = UDim2.new(0, 230, 0, 40)
+	btn.Font = Enum.Font.GothamBold
+	btn.Text = text
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.TextSize = 14
+	
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 6)
+	corner.Parent = btn
+	
+	btn.MouseButton1Click:Connect(callback)
+	return btn
+end
+
+-- 2. ปุ่มเพิ่ม FPS (ลดกราฟิก/ปิดเอฟเฟกต์เบื้องต้น)
+createButton("BoostFPSBtn", "Boost FPS (เพิ่มความลื่น)", function()
+	pcall(function()
+		local lighting = game:GetService("Lighting")
+		lighting.GlobalShadows = false
+		lighting.FogEnd = 999999
+		for _, v in pairs(lighting:GetChildren()) do
+			if v:IsA("PostEffect") then
+				v.Enabled = false
+			end
+		end
+		for _, v in pairs(workspace:GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.Material = Enum.Material.SmoothPlastic
+				v.Reflectance = 0
+			end
+		end
+	end)
+	print("Boost FPS Activated!")
+end)
+
+-- 3. ปุ่มลด Ping / เคลียร์แลคเน็ตเวิร์ก
+createButton("FixLagBtn", "Reduce Ping / Fix Lag", function()
+	pcall(function()
+		settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+		for _, v in pairs(workspace:GetDescendants()) do
+			if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") then
+				v.Enabled = false
+			end
+		end
+	end)
+	print("Ping optimization applied!")
+end)
+
+-- ระบบย่อหน้าต่าง
+MinimizeBtn.MouseButton1Click:Connect(function()
+	isMinimized = not isMinimized
+	if isMinimized then
+		Container.Visible = false
+		MainFrame.Size = UDim2.new(0, 260, 0, 35)
+		MinimizeBtn.Text = "+"
+	else
+		Container.Visible = true
+		MainFrame.Size = UDim2.new(0, 260, 0, 280)
+		MinimizeBtn.Text = "-"
+	end
+end)
+
+-- ระบบปิดเมนู
+CloseBtn.MouseButton1Click:Connect(function()
+	ScreenGui:Destroy()
+end)
